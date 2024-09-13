@@ -1,0 +1,62 @@
+import streamlit as st
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize, sent_tokenize
+
+# Download NLTK resources
+nltk.download('punkt')
+nltk.download('stopwords')
+
+# Define the summarization function
+def summarize_text(text, num_sentences=2):
+    # Tokenize the text into sentences
+    sentences = sent_tokenize(text)
+
+    # Tokenize the text into words and remove stopwords
+    stop_words = set(stopwords.words('english'))
+    word_tokens = word_tokenize(text.lower())
+    filtered_tokens = [word for word in word_tokens if word.isalnum() and word not in stop_words]
+
+    # Calculate word frequency
+    word_freq = nltk.FreqDist(filtered_tokens)
+
+    # Assign scores to sentences based on the sum of their word frequencies
+    sent_scores = {}
+    for sentence in sentences:
+        for word in word_tokenize(sentence.lower()):
+            if word in word_freq.keys():
+                if len(sentence.split(' ')) < 30:  # Consider only sentences with less than 30 words
+                    if sentence not in sent_scores.keys():
+                        sent_scores[sentence] = word_freq[word]
+                    else:
+                        sent_scores[sentence] += word_freq[word]
+
+    # Select the top N sentences with highest scores for summarization
+    summary_sentences = sorted(sent_scores, key=sent_scores.get, reverse=True)[:num_sentences]
+
+    # Generate the summary
+    summary = ' '.join(summary_sentences)
+    return summary
+
+# Streamlit app
+def main():
+    st.title("Text Summarization App")
+
+    st.write("Enter your text below and select the number of sentences for the summary.")
+
+    # Text input
+    text_input = st.text_area("Text", "Paste your text here...")
+    
+    # Number of sentences for summary
+    num_sentences = st.slider("Number of sentences in summary", min_value=1, max_value=10, value=2)
+    
+    if st.button("Generate Summary"):
+        if text_input:
+            summary = summarize_text(text_input, num_sentences)
+            st.write("### Summary:")
+            st.write(summary)
+        else:
+            st.write("Please enter some text to summarize.")
+
+if __name__ == "__main__":
+    main()
